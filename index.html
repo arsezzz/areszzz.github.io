@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>鸣潮伤害计算与对比工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  
+  <!-- Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1', // 鸣潮风格紫色
+            secondary: '#10b981',
+            accent: '#f59e0b',
+            dark: '#1e1b4b',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .tab-active {
+        @apply border-b-2 border-primary text-primary font-medium;
+      }
+      .card-hover {
+        @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+  <div class="container mx-auto px-4 py-6 max-w-6xl">
+    <!-- 标题区域 -->
+    <header class="mb-6 text-center">
+      <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-dark mb-2">鸣潮伤害计算与对比工具</h1>
+      <p class="text-gray-600">配置角色、武器和声骸组合，直观对比伤害数据</p>
+    </header>
+    
+    <!-- 标签页导航 -->
+    <div class="border-b border-gray-200 mb-4">
+      <ul class="flex flex-wrap -mb-px text-sm" id="tabList">
+        <li class="mr-1" role="presentation">
+          <button class="inline-block p-3 border-b-2 border-transparent rounded-t-lg tab-active" id="tab-damage">
+            <i class="fa fa-bar-chart mr-1"></i> 伤害对比
+          </button>
+        </li>
+        <li class="mr-1" role="presentation">
+          <button class="inline-block p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600" id="tab-weapon">
+            <i class="fa fa-crosshairs mr-1"></i> 共鸣器配置
+          </button>
+        </li>
+        <li class="mr-1" role="presentation">
+          <button class="inline-block p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600" id="tab-character">
+            <i class="fa fa-user mr-1"></i> 角色配置
+          </button>
+        </li>
+        <li role="presentation">
+          <button class="inline-block p-3 border-b-2 border-transparent rounded-t-lg hover:text-gray-600" id="tab-relic">
+            <i class="fa fa-cubes mr-1"></i> 声骸配置
+          </button>
+        </li>
+      </ul>
+    </div>
+    
+    <!-- 标签页内容 -->
+    <div class="tab-content">
+      <!-- 伤害对比标签页 -->
+      <div class="tab-pane" id="content-damage">
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+          <h2 class="text-lg font-semibold mb-3">伤害对比图表</h2>
+          <div class="h-64 md:h-80">
+            <canvas id="damageChart"></canvas>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-4">
+          <h2 class="text-lg font-semibold mb-3">组合管理</h2>
+          <div class="flex flex-wrap gap-3 mb-4" id="combinationList">
+            <!-- 组合1 -->
+            <div class="card-hover bg-gray-50 border border-gray-200 rounded-lg p-3 w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.75rem)]">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-medium">组合 1</h3>
+                <div class="text-xs">
+                  <button class="text-primary hover:text-primary/80 mr-2" onclick="editCombination(0)">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                  <button class="text-red-500 hover:text-red-600" onclick="deleteCombination(0)">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600 mb-1">角色：苍角</p>
+              <p class="text-sm text-gray-600 mb-1">共鸣器：雷霆</p>
+              <p class="text-sm text-gray-600 mb-1">声骸：风暴四件套</p>
+              <p class="text-base font-bold text-primary mt-1">预计伤害：18600</p>
+            </div>
+            
+            <!-- 组合2 -->
+            <div class="card-hover bg-gray-50 border border-gray-200 rounded-lg p-3 w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.75rem)]">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="font-medium">组合 2</h3>
+                <div class="text-xs">
+                  <button class="text-primary hover:text-primary/80 mr-2" onclick="editCombination(1)">
+                    <i class="fa fa-pencil"></i>
+                  </button>
+                  <button class="text-red-500 hover:text-red-600" onclick="deleteCombination(1)">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600 mb-1">角色：白祇</p>
+              <p class="text-sm text-gray-600 mb-1">共鸣器：流水</p>
+              <p class="text-sm text-gray-600 mb-1">声骸：海洋四件套</p>
+              <p class="text-base font-bold text-primary mt-1">预计伤害：15200</p>
+            </div>
+            
+            <!-- 添加新组合 -->
+            <div class="card-hover bg-gray-50 border border-dashed border-gray-300 rounded-lg p-3 w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.75rem)] flex items-center justify-center h-36 cursor-pointer text-gray-500 hover:text-primary" onclick="addNewCombination()">
+              <div class="text-center">
+                <i class="fa fa-plus-circle text-xl mb-1"></i>
+                <p>添加新组合</p>
+              </div>
+            </div>
+          </div>
+          
+          <button class="bg-primary hover:bg-primary/90 text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="refreshDamageChart()">
+            <i class="fa fa-refresh mr-1"></i> 刷新伤害数据
+          </button>
+        </div>
+      </div>
+      
+      <!-- 共鸣器配置标签页 -->
+      <div class="tab-pane hidden" id="content-weapon">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">共鸣器列表</h2>
+            <button class="bg-secondary hover:bg-secondary/90 text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="showWeaponModal(true)">
+              <i class="fa fa-plus mr-1"></i> 添加共鸣器
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead>
+                <tr>
+                  <th class="px-3 py-2 text-left text-gray-500">名称</th>
+                  <th class="px-3 py-2 text-left text-gray-500">类型</th>
+                  <th class="px-3 py-2 text-left text-gray-500">基础攻击</th>
+                  <th class="px-3 py-2 text-left text-gray-500">主属性</th>
+                  <th class="px-3 py-2 text-left text-gray-500">操作</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200" id="weaponTableBody">
+                <tr>
+                  <td class="px-3 py-2">雷霆</td>
+                  <td class="px-3 py-2">近战</td>
+                  <td class="px-3 py-2">456</td>
+                  <td class="px-3 py-2">雷元素伤害+28%</td>
+                  <td class="px-3 py-2">
+                    <button class="text-primary hover:text-primary/80 mr-2 text-xs" onclick="editWeapon(0)">编辑</button>
+                    <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteWeapon(0)">删除</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-3 py-2">流水</td>
+                  <td class="px-3 py-2">远程</td>
+                  <td class="px-3 py-2">428</td>
+                  <td class="px-3 py-2">水元素伤害+28%</td>
+                  <td class="px-3 py-2">
+                    <button class="text-primary hover:text-primary/80 mr-2 text-xs" onclick="editWeapon(1)">编辑</button>
+                    <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteWeapon(1)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 角色配置标签页 -->
+      <div class="tab-pane hidden" id="content-character">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">角色列表</h2>
+            <button class="bg-secondary hover:bg-secondary/90 text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="showCharacterModal(true)">
+              <i class="fa fa-plus mr-1"></i> 添加角色
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="characterList">
+            <div class="card-hover border border-gray-200 rounded-lg p-3 flex">
+              <div class="w-12 h-12 bg-purple-100 rounded-full mr-3 flex-shrink-0 flex items-center justify-center text-primary">
+                <i class="fa fa-bolt"></i>
+              </div>
+              <div class="flex-grow">
+                <h3 class="font-medium text-sm">苍角</h3>
+                <p class="text-xs text-gray-600">元素类型：雷</p>
+                <p class="text-xs text-gray-600">等级：80</p>
+                <div class="mt-1 flex">
+                  <button class="text-primary hover:text-primary/80 text-xs mr-2" onclick="editCharacter(0)">编辑</button>
+                  <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteCharacter(0)">删除</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-hover border border-gray-200 rounded-lg p-3 flex">
+              <div class="w-12 h-12 bg-blue-100 rounded-full mr-3 flex-shrink-0 flex items-center justify-center text-blue-500">
+                <i class="fa fa-tint"></i>
+              </div>
+              <div class="flex-grow">
+                <h3 class="font-medium text-sm">白祇</h3>
+                <p class="text-xs text-gray-600">元素类型：水</p>
+                <p class="text-xs text-gray-600">等级：80</p>
+                <div class="mt-1 flex">
+                  <button class="text-primary hover:text-primary/80 text-xs mr-2" onclick="editCharacter(1)">编辑</button>
+                  <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteCharacter(1)">删除</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="card-hover border border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center h-20 cursor-pointer text-gray-500 hover:text-primary" onclick="showCharacterModal(true)">
+              <div class="text-center text-sm">
+                <i class="fa fa-plus-circle mr-1"></i>
+                <span>添加新角色</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 声骸配置标签页 -->
+      <div class="tab-pane hidden" id="content-relic">
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold">声骸套装</h2>
+            <button class="bg-secondary hover:bg-secondary/90 text-white px-3 py-1.5 rounded text-sm transition-colors" onclick="showRelicModal(true)">
+              <i class="fa fa-plus mr-1"></i> 添加套装
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="relicList">
+            <div class="card-hover border border-gray-200 rounded-lg p-3">
+              <h3 class="font-medium text-sm mb-2">风暴四件套</h3>
+              <p class="text-xs text-gray-600 mb-1">2件套：雷元素伤害提高15%</p>
+              <p class="text-xs text-gray-600 mb-1">4件套：技能暴击率提高8%</p>
+              <div class="mt-2 flex">
+                <button class="text-primary hover:text-primary/80 text-xs mr-2" onclick="editRelic(0)">编辑</button>
+                <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteRelic(0)">删除</button>
+              </div>
+            </div>
+            
+            <div class="card-hover border border-gray-200 rounded-lg p-3">
+              <h3 class="font-medium text-sm mb-2">海洋四件套</h3>
+              <p class="text-xs text-gray-600 mb-1">2件套：水元素伤害提高15%</p>
+              <p class="text-xs text-gray-600 mb-1">4件套：技能伤害提高12%</p>
+              <div class="mt-2 flex">
+                <button class="text-primary hover:text-primary/80 text-xs mr-2" onclick="editRelic(1)">编辑</button>
+                <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteRelic(1)">删除</button>
+              </div>
+            </div>
+            
+            <div class="card-hover border border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center h-24 cursor-pointer text-gray-500 hover:text-primary md:col-span-2" onclick="showRelicModal(true)">
+              <div class="text-center text-sm">
+                <i class="fa fa-plus-circle mr-1"></i>
+                <span>添加新声骸套装</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 通用模态框 -->
+  <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-4 w-full max-w-md">
+      <h3 class="text-base font-semibold mb-3" id="modalTitle">添加新项</h3>
+      <form id="modalForm">
+        <div id="modalFormFields"></div>
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" class="px-3 py-1.5 border border-gray-300 rounded text-sm hover:bg-gray-50" onclick="showModal(false)">取消</button>
+          <button type="submit" class="px-3 py-1.5 bg-secondary text-white rounded text-sm hover:bg-secondary/90">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    // 数据存储
+    let data = {
+      weapons: [
+        { id: 1, name: '雷霆', type: '近战', attack: 456, mainAttr: '雷元素伤害+28%' },
+        { id: 2, name: '流水', type: '远程', attack: 428, mainAttr: '水元素伤害+28%' }
+      ],
+      characters: [
+        { id: 1, name: '苍角', element: '雷', level: 80 },
+        { id: 2, name: '白祇', element: '水', level: 80 }
+      ],
+      relics: [
+        { id: 1, name: '风暴四件套', twoPiece: '雷元素伤害提高15%', fourPiece: '技能暴击率提高8%' },
+        { id: 2, name: '海洋四件套', twoPiece: '水元素伤害提高15%', fourPiece: '技能伤害提高12%' }
+      ],
+      combinations: [
+        { id: 1, character: '苍角', weapon: '雷霆', relic: '风暴四件套', damage: 18600 },
+        { id: 2, character: '白祇', weapon: '流水', relic: '海洋四件套', damage: 15200 }
+      ],
+      currentEditId: null,
+      currentEditType: null
+    };
+    
+    // 初始化图表
+    let damageChart;
+    function initChart() {
+      const ctx = document.getElementById('damageChart').getContext('2d');
+      const labels = data.combinations.map(c => `${c.character}+${c.weapon}`);
+      const damageData = data.combinations.map(c => c.damage);
+      
+      damageChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '技能伤害',
+            data: damageData,
+            backgroundColor: 'rgba(99, 102, 241, 0.7)',
+            borderColor: 'rgba(99, 102, 241, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '伤害值'
+              }
+            }
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: '鸣潮角色组合伤害对比'
+            }
+          }
+        }
+      });
+    }
+    
+    // 刷新图表数据
+    function refreshDamageChart() {
+      const labels = data.combinations.map(c => `${c.character}+${c.weapon}`);
+      const damageData = data.combinations.map(c => c.damage);
+      
+      damageChart.data.labels = labels;
+      damageChart.data.datasets[0].data = damageData;
+      damageChart.update();
+    }
+    
+    // 标签页切换
+    document.querySelectorAll('#tabList button').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // 移除所有标签的活跃状态
+        document.querySelectorAll('#tabList button').forEach(t => {
+          t.classList.remove('tab-active');
+        });
+        
+        // 隐藏所有内容
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+          pane.classList.add('hidden');
+        });
+        
+        // 激活当前标签
+        tab.classList.add('tab-active');
+        
+        // 显示对应内容
+        const tabId = tab.id.replace('tab-', 'content-');
+        document.getElementById(tabId).classList.remove('hidden');
+      });
+    });
+    
+    // 模态框控制
+    function showModal(show) {
+      const modal = document.getElementById('modal');
+      if (show) {
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+        document.getElementById('modalForm').reset();
+        data.currentEditId = null;
+        data.currentEditType = null;
+      }
+    }
+    
+    // 显示共鸣器模态框
+    function showWeaponModal(isNew, id = null) {
+      data.currentEditType = 'weapon';
+      data.currentEditId = id;
+      
+      document.getElementById('modalTitle').textContent = isNew ? '添加共鸣器' : '编辑共鸣器';
+      
+      const formFields = `
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">共鸣器名称</label>
+          <input type="text" name="name" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">类型</label>
+          <select name="type" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <option value="近战">近战</option>
+            <option value="远程">远程</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">基础攻击</label>
+          <input type="number" name="attack" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+        <div class="mb-3">
+          <label class="block text-xs font-medium text-gray-700 mb-1">主属性</label>
+          <input type="text" name="mainAttr" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" placeholder="例如：雷元素伤害+28%" required>
+        </div>
+      `;
+      
+      document.getElementById('modalFormFields').innerHTML = formFields;
+      
+      // 如果是编辑，填充数据
+      if (!isNew && id !== null) {
+        const weapon = data.weapons.find(w => w.id === id);
+        if (weapon) {
+          document.querySelector('input[name="name"]').value = weapon.name;
+          document.querySelector('select[name="type"]').value = weapon.type;
+          document.querySelector('input[name="attack"]').value = weapon.attack;
+          document.querySelector('input[name="mainAttr"]').value = weapon.mainAttr;
+        }
+      }
+      
+      showModal(true);
+    }
+    
+    // 显示角色模态框
+    function showCharacterModal(isNew, id = null) {
+      data.currentEditType = 'character';
+      data.currentEditId = id;
+      
+      document.getElementById('modalTitle').textContent = isNew ? '添加角色' : '编辑角色';
+      
+      const formFields = `
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">角色名称</label>
+          <input type="text" name="name" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">元素类型</label>
+          <select name="element" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+            <option value="雷">雷</option>
+            <option value="水">水</option>
+            <option value="火">火</option>
+            <option value="风">风</option>
+            <option value="岩">岩</option>
+            <option value="草">草</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="block text-xs font-medium text-gray-700 mb-1">等级</label>
+          <input type="number" name="level" min="1" max="80" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+      `;
+      
+      document.getElementById('modalFormFields').innerHTML = formFields;
+      
+      // 如果是编辑，填充数据
+      if (!isNew && id !== null) {
+        const character = data.characters.find(c => c.id === id);
+        if (character) {
+          document.querySelector('input[name="name"]').value = character.name;
+          document.querySelector('select[name="element"]').value = character.element;
+          document.querySelector('input[name="level"]').value = character.level;
+        }
+      }
+      
+      showModal(true);
+    }
+    
+    // 显示声骸模态框
+    function showRelicModal(isNew, id = null) {
+      data.currentEditType = 'relic';
+      data.currentEditId = id;
+      
+      document.getElementById('modalTitle').textContent = isNew ? '添加声骸套装' : '编辑声骸套装';
+      
+      const formFields = `
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">套装名称</label>
+          <input type="text" name="name" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+        <div class="mb-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">2件套效果</label>
+          <input type="text" name="twoPiece" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+        <div class="mb-3">
+          <label class="block text-xs font-medium text-gray-700 mb-1">4件套效果</label>
+          <input type="text" name="fourPiece" class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary" required>
+        </div>
+      `;
+      
+      document.getElementById('modalFormFields').innerHTML = formFields;
+      
+      // 如果是编辑，填充数据
+      if (!isNew && id !== null) {
+        const relic = data.relics.find(r => r.id === id);
+        if (relic) {
+          document.querySelector('input[name="name"]').value = relic.name;
+          document.querySelector('input[name="twoPiece"]').value = relic.twoPiece;
+          document.querySelector('input[name="fourPiece"]').value = relic.fourPiece;
+        }
+      }
+      
+      showModal(true);
+    }
+    
+    // 表单提交处理
+    document.getElementById('modalForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const formValues = Object.fromEntries(formData.entries());
+      
+      if (data.currentEditType === 'weapon') {
+        if (data.currentEditId !== null) {
+          // 编辑共鸣器
+          const index = data.weapons.findIndex(w => w.id === data.currentEditId);
+          if (index !== -1) {
+            data.weapons[index] = {
+              ...data.weapons[index],
+              ...formValues,
+              attack: parseInt(formValues.attack)
+            };
+          }
+        } else {
+          // 添加新共鸣器
+          const newId = Math.max(...data.weapons.map(w => w.id), 0) + 1;
+          data.weapons.push({
+            id: newId,
+            ...formValues,
+            attack: parseInt(formValues.attack)
+          });
+        }
+        renderWeapons();
+      } else if (data.currentEditType === 'character') {
+        if (data.currentEditId !== null) {
+          // 编辑角色
+          const index = data.characters.findIndex(c => c.id === data.currentEditId);
+          if (index !== -1) {
+            data.characters[index] = {
+              ...data.characters[index],
+              ...formValues,
+              level: parseInt(formValues.level)
+            };
+          }
+        } else {
+          // 添加新角色
+          const newId = Math.max(...data.characters.map(c => c.id), 0) + 1;
+          data.characters.push({
+            id: newId,
+            ...formValues,
+            level: parseInt(formValues.level)
+          });
+        }
+        renderCharacters();
+      } else if (data.currentEditType === 'relic') {
+        if (data.currentEditId !== null) {
+          // 编辑声骸
+          const index = data.relics.findIndex(r => r.id === data.currentEditId);
+          if (index !== -1) {
+            data.relics[index] = {
+              ...data.relics[index],
+              ...formValues
+            };
+          }
+        } else {
+          // 添加新声骸
+          const newId = Math.max(...data.relics.map(r => r.id), 0) + 1;
+          data.relics.push({
+            id: newId,
+            ...formValues
+          });
+        }
+        renderRelics();
+      }
+      
+      showModal(false);
+    });
+    
+    // 渲染共鸣器列表
+    function renderWeapons() {
+      const tableBody = document.getElementById('weaponTableBody');
+      tableBody.innerHTML = '';
+      
+      data.weapons.forEach((weapon, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="px-3 py-2">${weapon.name}</td>
+          <td class="px-3 py-2">${weapon.type}</td>
+          <td class="px-3 py-2">${weapon.attack}</td>
+          <td class="px-3 py-2">${weapon.mainAttr}</td>
+          <td class="px-3 py-2">
+            <button class="text-primary hover:text-primary/80 mr-2 text-xs" onclick="editWeapon(${weapon.id})">编辑</button>
+            <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteWeapon(${index})">删除</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // 渲染角色列表
+    function renderCharacters() {
+      const characterList = document.getElementById('characterList');
+      // 保留最后一个"添加"按钮
+      const addButton = characterList.lastElementChild;
+      characterList.innerHTML = '';
+      
+      data.characters.forEach((character, index) => {
+        // 根据元素类型选择不同颜色
+        let colorClass = 'bg-gray-100 text-gray-500';
+        let icon = 'fa-user';
+        
+        switch(character.element) {
+          case '雷': colorClass = 'bg-purple-100 text-primary'; icon = 'fa-bolt'; break;
+          case '水': colorClass = 'bg-blue-100 text-blue-500'; icon = 'fa-tint'; break;
+          case '火': colorClass = 'bg-red-100 text-red-500'; icon = 'fa-fire'; break;
+          case '风': colorClass = 'bg-green-100 text-green-500'; icon = 'fa-leaf'; break;
+          case '岩': colorClass = 'bg-yellow-100 text-yellow-600'; icon = 'fa-cube'; break;
+          case '草': colorClass = 'bg-emerald-100 text-emerald-500'; icon = 'fa-pagelines'; break;
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'card-hover border border-gray-200 rounded-lg p-3 flex';
+        card.innerHTML = `
+          <div class="w-12 h-12 ${colorClass} rounded-full mr-3 flex-shrink-0 flex items-center justify-center">
+            <i class="fa ${icon}"></i>
+          </div>
+          <div class="flex-grow">
+            <h3 class="font-medium text-sm">${character.name}</h3>
+            <p class="text-xs text-gray-600">元素类型：${character.element}</p>
+            <p class="text-xs text-gray-600">等级：${character.level}</p>
+            <div class="mt-1 flex">
+              <button class="text-primary hover:text-primary/80 text-xs mr-2" onclick="editCharacter(${character.id})">编辑</button>
+              <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteCharacter(${index})">删除</button>
+            </div>
+          </div>
+        `;
+        characterList.appendChild(card);
+      });
+      
+      // 添加回"添加"按钮
+      characterList.appendChild(addButton);
+    }
+    
+    // 渲染声骸列表
+    function renderRelics() {
+      const relicList = document.getElementById('relicList');
+      // 保留最后一个"添加"按钮
+      const addButton = relicList.lastElementChild;
+      relicList.innerHTML = '';
+      
+      data.relics.forEach((relic, index) => {
+        const card = document.createElement('div');
+        card.className = 'card-hover border border-gray-200 rounded-lg p-3';
+        card.innerHTML = `
+          <h3 class="font-medium text-sm mb-2">${relic.name}</h3>
+          <p class="text-xs text-gray-600 mb-1">2件套：${relic.twoPiece}</p>
+          <p class="text-xs text-gray-600 mb-1">4件套：${relic.fourPiece}</p>
+          <div class="mt-2 flex">
+            <button class="text-primary hover:text-primary/80 text-xs mr-2" onclick="editRelic(${relic.id})">编辑</button>
+            <button class="text-red-500 hover:text-red-600 text-xs" onclick="deleteRelic(${index})">删除</button>
+          </div>
+        `;
+        relicList.appendChild(card);
+      });
+      
+      // 添加回"添加"按钮
+      relicList.appendChild(addButton);
+    }
+    
+    // 编辑共鸣器
+    function editWeapon(id) {
+      showWeaponModal(false, id);
+    }
+    
+    // 删除共鸣器
+    function deleteWeapon(index) {
+      if (confirm('确定要删除这个共鸣器吗？')) {
+        data.weapons.splice(index, 1);
+        renderWeapons();
+      }
+    }
+    
+    // 编辑角色
+    function editCharacter(id) {
+      showCharacterModal(false, id);
+    }
+    
+    // 删除角色
+    function deleteCharacter(index) {
+      if (confirm('确定要删除这个角色吗？')) {
+        data.characters.splice(index, 1);
+        renderCharacters();
+      }
+    }
+    
+    // 编辑声骸
+    function editRelic(id) {
+      showRelicModal(false, id);
+    }
+    
+    // 删除声骸
+    function deleteRelic(index) {
+      if (confirm('确定要删除这个声骸套装吗？')) {
+        data.relics.splice(index, 1);
+        renderRelics();
+      }
+    }
+    
+    // 添加新组合
+    function addNewCombination() {
+      const newId = Math.max(...data.combinations.map(c => c.id), 0) + 1;
+      data.combinations.push({
+        id: newId,
+        character: data.characters.length > 0 ? data.characters[0].name : '未选择',
+        weapon: data.weapons.length > 0 ? data.weapons[0].name : '未选择',
+        relic: data.relics.length > 0 ? data.relics[0].name : '未选择',
+        damage: 0
+      });
+      renderCombinations();
+      refreshDamageChart();
+    }
+    
+    // 编辑组合
+    function editCombination(index) {
+      const combination = data.combinations[index];
+      const newDamage = prompt(`编辑组合 ${index + 1} 伤害值`, combination.damage);
+      if (newDamage !== null && !isNaN(newDamage)) {
+        data.combinations[index].damage = parseInt(newDamage);
+        renderCombinations();
+        refreshDamageChart();
+      }
+    }
+    
+    // 删除组合
+    function deleteCombination(index) {
+      if (confirm('确定要删除这个组合吗？')) {
+        data.combinations.splice(index, 1);
+        renderCombinations();
+        refreshDamageChart();
+      }
+    }
+    
+    // 渲染组合列表
+    function renderCombinations() {
+      const combinationList = document.getElementById('combinationList');
+      // 保留最后一个"添加"按钮
+      const addButton = combinationList.lastElementChild;
+      combinationList.innerHTML = '';
+      
+      data.combinations.forEach((combination, index) => {
+        const card = document.createElement('div');
+        card.className = 'card-hover bg-gray-50 border border-gray-200 rounded-lg p-3 w-full sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.75rem)]';
+        card.innerHTML = `
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="font-medium">组合 ${index + 1}</h3>
+            <div class="text-xs">
+              <button class="text-primary hover:text-primary/80 mr-2" onclick="editCombination(${index})">
+                <i class="fa fa-pencil"></i>
+              </button>
+              <button class="text-red-500 hover:text-red-600" onclick="deleteCombination(${index})">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+          <p class="text-sm text-gray-600 mb-1">角色：${combination.character}</p>
+          <p class="text-sm text-gray-600 mb-1">共鸣器：${combination.weapon}</p>
+          <p class="text-sm text-gray-600 mb-1">声骸：${combination.relic}</p>
+          <p class="text-base font-bold text-primary mt-1">预计伤害：${combination.damage}</p>
+        `;
+        combinationList.appendChild(card);
+      });
+      
+      // 添加回"添加"按钮
+      combinationList.appendChild(addButton);
+    }
+    
+    // 初始化
+    window.onload = function() {
+      initChart();
+      renderWeapons();
+      renderCharacters();
+      renderRelics();
+      renderCombinations();
+    };
+  </script>
+</body>
+</html>
